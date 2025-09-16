@@ -2,12 +2,14 @@ import os
 import cv2
 import numpy as np
 import tensorflow as tf
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS  # allow cross-origin if needed
 
 # ================================
 # 1. App Setup
 # ================================
 app = Flask(__name__)
+CORS(app)  # optional: if you still want to test from local file://
 
 # Load model once (at startup)
 MODEL_PATH = "best_model.h5"   # Make sure this file is in your project folder
@@ -46,20 +48,18 @@ def predict():
         })
 
     finally:
-        # Always remove the uploaded file after processing
         if os.path.exists(filepath):
             os.remove(filepath)
 
 # ================================
-# 3. Health Check
+# 3. Serve index.html
 # ================================
-@app.route("/", methods=["GET"])
-def home():
-    return "✅ Compostable Classifier API is running!"
+@app.route("/")
+def serve_index():
+    return send_from_directory(".", "index.html")
 
 # ================================
 # 4. Run App
 # ================================
 if __name__ == "__main__":
-    # Use host='0.0.0.0' for Render/Railway deployment
     app.run(host="0.0.0.0", port=5000, debug=True)
