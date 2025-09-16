@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Compostable Classifier</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 30px; }
+    .preview { max-width: 300px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Compostable or Non-Compostable?</h1>
+  <input type="file" id="fileInput" accept="image/*">
+  <img id="preview" class="preview"/>
+  <button onclick="uploadImage()">Classify</button>
+  <p id="result"></p>
+
+  <script>
+    function uploadImage() {
+      const fileInput = document.getElementById("fileInput");
+      const file = fileInput.files[0];
+      if (!file) return alert("Please select an image!");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      fetch("https://vacuum-ai.onrender.com/predict", { // backend endpoint
+        method: "POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("result").innerText =
+          `Prediction: ${data.label} (${data.confidence}%)`;
+      });
+    }
+
+    // Image preview
+    document.getElementById("fileInput").addEventListener("change", e => {
+      document.getElementById("preview").src = URL.createObjectURL(e.target.files[0]);
+    });
+  </script>
+</body>
+</html>
