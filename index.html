@@ -23,7 +23,7 @@
       const formData = new FormData();
       formData.append("file", file);
 
-      fetch("https://vacuum-ai.onrender.com/predict", { // backend endpoint
+      fetch("/predict", { // backend endpoint
         method: "POST",
         body: formData
       })
