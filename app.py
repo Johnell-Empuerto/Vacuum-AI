@@ -3,16 +3,16 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS  # allow cross-origin if needed
+from flask_cors import CORS
 
 # ================================
 # 1. App Setup
 # ================================
 app = Flask(__name__)
-CORS(app)  # optional: if you still want to test from local file://
+CORS(app)
 
 # Load model once (at startup)
-MODEL_PATH = "best_model.h5"   # Make sure this file is in your project folder
+MODEL_PATH = "best_model.h5"
 model = tf.keras.models.load_model(MODEL_PATH)
 
 IMG_SIZE = 224
@@ -27,12 +27,14 @@ def predict():
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files["file"]
-    filepath = "temp.jpg"
+    filepath = os.path.join("/tmp", "temp.jpg")  # Use /tmp for Railway
     file.save(filepath)
 
     try:
         # Read and preprocess image
         img = cv2.imread(filepath)
+        if img is None:
+            return jsonify({"error": "Invalid image file"}), 400
         img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
         img = img.astype("float32") / 255.0
         img = np.expand_dims(img, axis=0)
@@ -47,9 +49,14 @@ def predict():
             "confidence": round(confidence * 100, 2)
         })
 
+    except Exception as e:
+        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
     finally:
         if os.path.exists(filepath):
-            os.remove(filepath)
+            try:
+                os.remove(filepath)
+            except Exception as e:
+                print(f"Failed to delete temp file: {e}")
 
 # ================================
 # 3. Serve index.html
@@ -62,4 +69,5 @@ def serve_index():
 # 4. Run App
 # ================================
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Use Railway's PORT
+    app.run(host="0.0.0.0", port=port, debug=False)  # Disable debug for production

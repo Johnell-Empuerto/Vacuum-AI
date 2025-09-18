@@ -23,18 +23,28 @@
       const formData = new FormData();
       formData.append("file", file);
 
-      fetch("/predict", { // backend endpoint
+      fetch("/predict", {
         method: "POST",
         body: formData
       })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
-        document.getElementById("result").innerText =
-          `Prediction: ${data.label} (${data.confidence}%)`;
+        if (data.error) {
+          document.getElementById("result").innerText = `Error: ${data.error}`;
+        } else {
+          document.getElementById("result").innerText =
+            `Prediction: ${data.label} (${data.confidence}%)`;
+        }
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        document.getElementById("result").innerText = `Error: Failed to classify image`;
       });
     }
 
-    // Image preview
     document.getElementById("fileInput").addEventListener("change", e => {
       document.getElementById("preview").src = URL.createObjectURL(e.target.files[0]);
     });
