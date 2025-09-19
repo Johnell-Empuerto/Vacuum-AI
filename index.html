@@ -5,14 +5,27 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 30px; }
     .preview { max-width: 300px; margin: 10px 0; }
+    .result-box {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+      width: fit-content;
+    }
+    .compostable { background: #d4edda; color: #155724; }
+    .non-compostable { background: #f8d7da; color: #721c24; }
+    .unsure { background: #fff3cd; color: #856404; }
   </style>
 </head>
 <body>
   <h1>Compostable or Non-Compostable?</h1>
   <input type="file" id="fileInput" accept="image/*">
   <img id="preview" class="preview"/>
+  <br>
   <button onclick="uploadImage()">Classify</button>
-  <p id="result"></p>
+
+  <div id="result" class="result-box"></div>
 
   <script>
     function uploadImage() {
@@ -32,16 +45,33 @@
         return res.json();
       })
       .then(data => {
+        const resultDiv = document.getElementById("result");
+
         if (data.error) {
-          document.getElementById("result").innerText = `Error: ${data.error}`;
+          resultDiv.textContent = `Error: ${data.error}`;
+          resultDiv.className = "result-box unsure";
+          return;
+        }
+
+        const { label, group, confidence } = data;
+
+        // Style based on group/unsure
+        if (label.startsWith("Not sure")) {
+          resultDiv.className = "result-box unsure";
+          resultDiv.textContent = `${label} (${confidence}%)`;
+        } else if (group === "compostable") {
+          resultDiv.className = "result-box compostable";
+          resultDiv.textContent = `Prediction: ${label} [Compostable] (${confidence}%)`;
         } else {
-          document.getElementById("result").innerText =
-            `Prediction: ${data.label} (${data.confidence}%)`;
+          resultDiv.className = "result-box non-compostable";
+          resultDiv.textContent = `Prediction: ${label} [Non-Compostable] (${confidence}%)`;
         }
       })
       .catch(error => {
         console.error("Error:", error);
-        document.getElementById("result").innerText = `Error: Failed to classify image`;
+        const resultDiv = document.getElementById("result");
+        resultDiv.textContent = `Error: Failed to classify image`;
+        resultDiv.className = "result-box unsure";
       });
     }
 

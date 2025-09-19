@@ -16,7 +16,20 @@ MODEL_PATH = "best_model.h5"
 model = tf.keras.models.load_model(MODEL_PATH)
 
 IMG_SIZE = 224
-LABELS = ["Compostable", "Non-Compostable"]
+
+# Match your dataset class order (from ImageDataGenerator flow_from_directory)
+LABELS = [
+    "apple", "banana", "cardboard", "cucumber", "food_organics",
+    "leaves_flowers", "mango", "onion", "orange", "paper", "tomato", "vegetation",
+    "battery", "clothes", "coins", "glass", "metal", "plastic", "shoes_slippers"
+]
+
+# Optional grouping for Compostable / Non-Compostable
+GROUPS = {
+    "compostable": {"apple","banana","cardboard","cucumber","food_organics",
+                    "leaves_flowers","mango","onion","orange","paper","tomato","vegetation"},
+    "non_compostable": {"battery","clothes","coins","glass","metal","plastic","shoes_slippers"}
+}
 
 # ================================
 # 2. Prediction Endpoint
@@ -27,11 +40,11 @@ def predict():
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files["file"]
-    filepath = os.path.join("/tmp", "temp.jpg")  # Use /tmp for Railway
+    filepath = os.path.join("/tmp", "temp.jpg")
     file.save(filepath)
 
     try:
-        # Read and preprocess image
+        # Preprocess
         img = cv2.imread(filepath)
         if img is None:
             return jsonify({"error": "Invalid image file"}), 400
@@ -40,12 +53,24 @@ def predict():
         img = np.expand_dims(img, axis=0)
 
         # Predict
-        pred = model.predict(img, verbose=0)[0][0]
-        label = LABELS[int(pred > 0.5)]
-        confidence = float(pred if label == "Non-Compostable" else 1 - pred)
+        preds = model.predict(img, verbose=0)[0]
+        idx = np.argmax(preds)
+        label = LABELS[idx]
+        confidence = float(preds[idx])
+
+        # Compostable / Non-Compostable group
+        group = "compostable" if label in GROUPS["compostable"] else "non_compostable"
+
+        # Confidence threshold
+        THRESHOLD = 0.70
+        if confidence < THRESHOLD:
+            result_label = f"Not sure but {group}"
+        else:
+            result_label = label
 
         return jsonify({
-            "label": label,
+            "label": result_label,
+            "group": group,
             "confidence": round(confidence * 100, 2)
         })
 
@@ -69,5 +94,5 @@ def serve_index():
 # 4. Run App
 # ================================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Use Railway's PORT
-    app.run(host="0.0.0.0", port=port, debug=False)  # Disable debug for production
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
