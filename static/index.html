@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <h2>YOLO Camera Demo</h2>
+    <video id="camera" autoplay playsinline></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <button id="snap">Detect</button>
+    <pre id="output"></pre>
+
+    <script>
+      const video = document.getElementById("camera");
+      const canvas = document.getElementById("canvas");
+      const output = document.getElementById("output");
+
+      // Open camera
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => { video.srcObject = stream; });
+
+      document.getElementById("snap").onclick = async () => {
+        // Capture frame
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0);
+
+        // Convert to Blob
+        canvas.toBlob(async (blob) => {
+          const formData = new FormData();
+          formData.append("file", blob, "frame.jpg");
+
+          // Send to backend
+          const res = await fetch("/detect", {
+            method: "POST",
+            body: formData
+          });
+
+          const data = await res.json();
+          output.textContent = JSON.stringify(data, null, 2);
+        }, "image/jpeg");
+      };
+    </script>
+  </body>
+</html>

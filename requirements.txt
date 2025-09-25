@@ -1,6 +1,4 @@
-flask
-flask-cors
-tensorflow
-numpy
+fastapi
+uvicorn
+ultralytics
 opencv-python-headless
-gunicorn

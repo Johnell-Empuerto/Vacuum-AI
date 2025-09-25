@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Compostable Classifier</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 30px; }
+    .preview { max-width: 300px; margin: 10px 0; }
+    .result-box {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+      width: fit-content;
+    }
+    .compostable { background: #d4edda; color: #155724; }
+    .non-compostable { background: #f8d7da; color: #721c24; }
+    .unsure { background: #fff3cd; color: #856404; }
+  </style>
+</head>
+<body>
+  <h1>Compostable or Non-Compostable?</h1>
+  <input type="file" id="fileInput" accept="image/*">
+  <img id="preview" class="preview"/>
+  <br>
+  <button onclick="uploadImage()">Classify</button>
+
+  <div id="result" class="result-box"></div>
+
+  <script>
+    function uploadImage() {
+      const fileInput = document.getElementById("fileInput");
+      const file = fileInput.files[0];
+      if (!file) return alert("Please select an image!");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      fetch("/predict", {
+        method: "POST",
+        body: formData
+      })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        const resultDiv = document.getElementById("result");
+
+        if (data.error) {
+          resultDiv.textContent = `Error: ${data.error}`;
+          resultDiv.className = "result-box unsure";
+          return;
+        }
+
+        const { label, group, confidence } = data;
+
+        // Style based on group/unsure
+        if (label.startsWith("Not sure")) {
+          resultDiv.className = "result-box unsure";
+          resultDiv.textContent = `${label} (${confidence}%)`;
+        } else if (group === "compostable") {
+          resultDiv.className = "result-box compostable";
+          resultDiv.textContent = `Prediction: ${label} [Compostable] (${confidence}%)`;
+        } else {
+          resultDiv.className = "result-box non-compostable";
+          resultDiv.textContent = `Prediction: ${label} [Non-Compostable] (${confidence}%)`;
+        }
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        const resultDiv = document.getElementById("result");
+        resultDiv.textContent = `Error: Failed to classify image`;
+        resultDiv.className = "result-box unsure";
+      });
+    }
+
+    document.getElementById("fileInput").addEventListener("change", e => {
+      document.getElementById("preview").src = URL.createObjectURL(e.target.files[0]);
+    });
+  </script>
+</body>
+</html>
